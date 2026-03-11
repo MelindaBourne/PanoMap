@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const { PORT, AMAP_API_KEY } = require('./config');
+const { generalLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
@@ -24,12 +25,12 @@ app.use('/api/groups', require('./routes/groups'));
 // Note: The AMap key is intentionally served to the frontend (browser-side rendering).
 // In AMap's security model, keys are domain-restricted via the AMap console.
 // Restrict access to the key by configuring allowed domains in your AMap dashboard.
-app.get('/api/config', (req, res) => {
+app.get('/api/config', generalLimiter, (req, res) => {
   res.json({ amapKey: AMAP_API_KEY });
 });
 
 // Fallback to index.html for SPA routing
-app.get('*', (req, res) => {
+app.get('*', generalLimiter, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

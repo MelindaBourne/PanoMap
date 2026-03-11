@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { generalLimiter } = require('../middleware/rateLimiter');
 
 // Get all groups (public)
-router.get('/', async (req, res) => {
+router.get('/', generalLimiter, async (req, res) => {
   try {
     const db = await getDb();
     const groups = await db.all(`
@@ -24,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create group (requires auth)
-router.post('/', authenticate, async (req, res) => {
+router.post('/', generalLimiter, authenticate, async (req, res) => {
   const { name, description, color } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Group name is required' });
@@ -46,7 +47,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // Update group (requires auth, owner only)
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', generalLimiter, authenticate, async (req, res) => {
   const { name, description, color } = req.body;
   const groupId = parseInt(req.params.id);
 
@@ -77,7 +78,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // Delete group (requires auth, owner only)
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', generalLimiter, authenticate, async (req, res) => {
   const groupId = parseInt(req.params.id);
 
   try {

@@ -7,6 +7,7 @@ const sharp = require('sharp');
 const { getDb } = require('../database');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { MAX_FILE_SIZE } = require('../config');
+const { generalLimiter, uploadLimiter } = require('../middleware/rateLimiter');
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -53,7 +54,7 @@ const PHOTO_SELECT = `
 `;
 
 // Get all photos (public) with optional search and group filter
-router.get('/', optionalAuth, async (req, res) => {
+router.get('/', generalLimiter, optionalAuth, async (req, res) => {
   const { search, group_id } = req.query;
   let query = PHOTO_SELECT + ' WHERE 1=1';
   const params = [];
@@ -81,7 +82,7 @@ router.get('/', optionalAuth, async (req, res) => {
 });
 
 // Get single photo
-router.get('/:id', async (req, res) => {
+router.get('/:id', generalLimiter, async (req, res) => {
   try {
     const db = await getDb();
     const photo = await db.get(PHOTO_SELECT + ' WHERE p.id = ?', parseInt(req.params.id));
@@ -101,7 +102,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Upload photo (requires auth)
-router.post('/', authenticate, upload.single('photo'), async (req, res) => {
+router.post('/', uploadLimiter, authenticate, upload.single('photo'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No photo file provided' });
   }
@@ -158,7 +159,7 @@ router.post('/', authenticate, upload.single('photo'), async (req, res) => {
 });
 
 // Update photo (requires auth, owner only)
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', generalLimiter, authenticate, async (req, res) => {
   const photoId = parseInt(req.params.id);
   const { name, description, lat, lng, group_id } = req.body;
 
@@ -194,7 +195,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // Delete photo (requires auth, owner only)
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', generalLimiter, authenticate, async (req, res) => {
   const photoId = parseInt(req.params.id);
 
   try {
