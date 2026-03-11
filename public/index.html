@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PanoMap - 全景地图</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Pannellum for panoramic viewing -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+</head>
+<body class="map-page">
+
+  <!-- Top Navigation Bar -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <button class="sidebar-toggle-btn" id="sidebarToggle" title="切换侧边栏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="navbar-logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+          <circle cx="16" cy="16" r="14" stroke="white" stroke-width="1.5"/>
+          <path d="M4 16 Q9 8 16 16 Q23 24 28 16" stroke="white" stroke-width="1.5" fill="none"/>
+          <path d="M4 16 Q9 22 16 16 Q23 10 28 16" stroke="rgba(255,255,255,0.5)" stroke-width="1" fill="none"/>
+          <circle cx="16" cy="16" r="2.5" fill="white"/>
+        </svg>
+        <span>PanoMap</span>
+      </div>
+    </div>
+
+    <div class="navbar-center">
+      <div class="search-bar">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="搜索全景照片...">
+        <button class="search-clear hidden" id="searchClear" onclick="clearSearch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="navbar-right">
+      <!-- Auth buttons shown when not logged in -->
+      <div id="authButtons" class="hidden">
+        <a href="/login.html" class="btn-secondary btn-sm">登录</a>
+      </div>
+      <!-- User menu shown when logged in -->
+      <div id="userMenu" class="hidden">
+        <button id="uploadBtn" class="btn-primary btn-sm" onclick="openUploadModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          上传全景
+        </button>
+        <div class="user-dropdown">
+          <button class="user-avatar-btn" id="userAvatarBtn" onclick="toggleUserDropdown()">
+            <div class="user-avatar" id="userAvatarDisplay"></div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" id="dropdownMenu">
+            <div class="dropdown-header" id="dropdownUsername"></div>
+            <button class="dropdown-item" onclick="showMyPhotos()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+              </svg>
+              我的照片
+            </button>
+            <button class="dropdown-item" onclick="manageGroups()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              管理分组
+            </button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item danger" onclick="logout()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              退出登录
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>全景照片</h2>
+        <span class="photo-count" id="photoCount">0 张</span>
+      </div>
+
+      <!-- Group Filter -->
+      <div class="sidebar-filters">
+        <div class="filter-group">
+          <button class="filter-chip active" data-group="all" onclick="filterByGroup(null, this)">全部</button>
+          <div id="groupChips"></div>
+        </div>
+      </div>
+
+      <!-- Photo List -->
+      <div class="sidebar-list" id="sidebarList">
+        <div class="loading-state" id="sidebarLoading">
+          <div class="spinner"></div>
+          <p>加载中...</p>
+        </div>
+        <div class="empty-state hidden" id="sidebarEmpty">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+            <circle cx="32" cy="32" r="28"/>
+            <path d="M16 32 Q22 18 32 32 Q42 46 48 32"/>
+            <path d="M16 32 Q22 40 32 32 Q42 24 48 32"/>
+            <circle cx="32" cy="32" r="4"/>
+          </svg>
+          <p>暂无全景照片</p>
+          <p class="hint">上传第一张全景照片吧！</p>
+        </div>
+        <div id="photoList"></div>
+      </div>
+    </aside>
+
+    <!-- Map Container -->
+    <div class="map-wrapper">
+      <div id="map"></div>
+
+      <!-- Map Controls -->
+      <div class="map-controls">
+        <button class="map-control-btn" onclick="locateUser()" title="定位到我的位置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+            <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
+          </svg>
+        </button>
+        <button class="map-control-btn" onclick="fitAllPhotos()" title="显示所有照片">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Map Style Toggle -->
+      <div class="map-style-toggle">
+        <button class="style-btn active" id="styleStandard" onclick="setMapStyle('normal')" title="标准地图">标准</button>
+        <button class="style-btn" id="styleSatellite" onclick="setMapStyle('satellite')" title="卫星地图">卫星</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panorama Viewer Overlay -->
+  <div class="panorama-overlay hidden" id="panoramaOverlay">
+    <div class="panorama-container" id="panoramaContainer"></div>
+    <div class="panorama-controls">
+      <button class="pano-btn pano-close" onclick="closePanorama()" title="退出全景">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        <span>退出全景</span>
+      </button>
+      <div class="pano-info">
+        <h3 id="panoTitle"></h3>
+        <p id="panoUploader"></p>
+      </div>
+      <div class="pano-hints">
+        <span>🖱️ 拖动旋转</span>
+        <span>🔍 滚轮缩放</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="modal-overlay hidden" id="uploadModal">
+    <div class="modal" id="uploadModalContent">
+      <div class="modal-header">
+        <h2>上传全景照片</h2>
+        <button class="modal-close" onclick="closeUploadModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="uploadForm" onsubmit="handleUpload(event)">
+          <!-- File Upload -->
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('photoFile').click()">
+            <div class="upload-zone-content" id="uploadZoneContent">
+              <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                <path d="M32 44 L32 20 M22 30 L32 20 L42 30" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 48 C12 52 16 56 20 56 L44 56 C48 56 52 52 52 48 L52 36 C52 32 48 28 44 28" stroke-linecap="round"/>
+              </svg>
+              <p class="upload-hint-main">点击或拖拽上传全景照片</p>
+              <p class="upload-hint-sub">支持 JPG、PNG、WebP，最大 50MB</p>
+            </div>
+            <div class="upload-preview hidden" id="uploadPreview">
+              <img id="previewImg" src="" alt="预览">
+              <div class="preview-overlay">
+                <span>点击更换图片</span>
+              </div>
+            </div>
+          </div>
+          <input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleFileSelect(this)">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">照片名称 <span class="required">*</span></label>
+              <input type="text" id="photoName" class="form-input" placeholder="为这张全景照片命名" required maxlength="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">所属分组</label>
+              <div class="select-wrapper">
+                <select id="photoGroup" class="form-select">
+                  <option value="">无分组</option>
+                </select>
+                <button type="button" class="btn-ghost btn-sm" onclick="openCreateGroupInline()">+ 新建</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">照片描述</label>
+            <textarea id="photoDesc" class="form-textarea" placeholder="描述这张全景照片的拍摄地点或内容..." rows="2" maxlength="500"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">地图定位 <span class="required">*</span></label>
+            <p class="form-hint">在地图上点击选择拍摄位置</p>
+            <div class="location-picker">
+              <div id="locationMap"></div>
+              <div class="location-display" id="locationDisplay">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span id="locationText">点击地图选择位置</span>
+              </div>
+            </div>
+            <input type="hidden" id="photoLat" required>
+            <input type="hidden" id="photoLng" required>
+          </div>
+
+          <div id="uploadError" class="form-error hidden"></div>
+
+          <div class="upload-progress hidden" id="uploadProgress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span id="progressText">上传中...</span>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeUploadModal()">取消</button>
+            <button type="submit" class="btn-primary" id="uploadSubmitBtn">
+              <span class="btn-text">上传照片</span>
+              <div class="btn-spinner hidden"></div>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Manager Modal -->
+  <div class="modal-overlay hidden" id="groupModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>管理分组</h2>
+        <button class="modal-close" onclick="closeGroupModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="group-create">
+          <input type="text" id="newGroupName" class="form-input" placeholder="输入分组名称" maxlength="50">
+          <input type="color" id="newGroupColor" class="color-picker" value="#3B82F6" title="选择颜色">
+          <button class="btn-primary" onclick="createGroup()">创建分组</button>
+        </div>
+        <div id="groupError" class="form-error hidden"></div>
+        <div id="groupList" class="group-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Detail Modal -->
+  <div class="modal-overlay hidden" id="photoDetailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="detailTitle"></h2>
+        <button class="modal-close" onclick="closePhotoDetail()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="photo-detail-content">
+          <img id="detailThumb" src="" alt="" class="detail-thumb">
+          <div class="detail-info">
+            <p id="detailDesc" class="detail-desc"></p>
+            <div class="detail-meta">
+              <span id="detailUploader"></span>
+              <span id="detailGroup"></span>
+              <span id="detailDate"></span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn-primary" id="viewPanoBtn" onclick="viewPanoFromDetail()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12 Q7 4 12 12 Q17 20 22 12"/>
+            </svg>
+            查看全景
+          </button>
+          <button class="btn-danger hidden" id="deletePhotoBtn" onclick="deletePhotoFromDetail()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            删除照片
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
