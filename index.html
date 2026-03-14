@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1d4ed8" />
+  <meta name="description" content="PanoMap — 基于地图的全景照片浏览平台" />
+  <title>PanoMap · 全景地图</title>
+
+  <!-- Pannellum styles -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+  <!-- Font Awesome icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- App styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     AUTH OVERLAY
+     ═══════════════════════════════════════════════ -->
+<div id="auth-overlay" class="overlay">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="auth-logo"><i class="fas fa-globe-asia"></i></span>
+      <h1>PanoMap</h1>
+      <p>探索世界每一个角落的全景</p>
+    </div>
+
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" data-tab="login" role="tab" aria-selected="true">登&ensp;录</button>
+      <button class="auth-tab" data-tab="register" role="tab" aria-selected="false">注&ensp;册</button>
+    </div>
+
+    <!-- Login form -->
+    <form id="login-form" class="auth-form" novalidate>
+      <div class="field">
+        <span class="field-icon"><i class="fas fa-user"></i></span>
+        <input id="login-username" type="text" placeholder="用户名" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <span class="field-icon"><i class="fas fa-lock"></i></span>
+        <input id="login-password" type="password" placeholder="密码" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">登录</button>
+      <p class="auth-hint">
+        没有账户？<button type="button" class="link-btn" data-switch="register">立即注册</button>
+        &nbsp;|&nbsp;
+        <button type="button" class="link-btn" id="demo-login-btn">体验演示</button>
+      </p>
+    </form>
+
+    <!-- Register form -->
+    <form id="register-form" class="auth-form hidden" novalidate>
+      <div class="field">
+        <span class="field-icon"><i class="fas fa-user"></i></span>
+        <input id="reg-username" type="text" placeholder="用户名（至少3字符）" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <span class="field-icon"><i class="fas fa-envelope"></i></span>
+        <input id="reg-email" type="email" placeholder="邮箱（可选）" autocomplete="email" />
+      </div>
+      <div class="field">
+        <span class="field-icon"><i class="fas fa-lock"></i></span>
+        <input id="reg-password" type="password" placeholder="密码（至少6字符）" autocomplete="new-password" required />
+      </div>
+      <div class="field">
+        <span class="field-icon"><i class="fas fa-lock"></i></span>
+        <input id="reg-confirm" type="password" placeholder="确认密码" autocomplete="new-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">注册并进入</button>
+      <p class="auth-hint">
+        已有账户？<button type="button" class="link-btn" data-switch="login">立即登录</button>
+      </p>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MAIN APP (hidden until login)
+     ═══════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- ── Header ───────────────────────────────── -->
+  <header id="app-header">
+    <div class="hd-left">
+      <button id="sidebar-toggle" class="icon-btn" title="展开/收起侧边栏" aria-label="侧边栏">
+        <i class="fas fa-bars"></i>
+      </button>
+      <span class="app-logo">
+        <i class="fas fa-globe-asia"></i>
+        <strong>PanoMap</strong>
+      </span>
+    </div>
+
+    <div class="hd-center">
+      <div class="search-wrap" role="search">
+        <i class="fas fa-search search-ico"></i>
+        <input id="search-input" type="search" placeholder="搜索全景照片、分组…" autocomplete="off" />
+        <div id="search-drop" class="search-drop hidden" role="listbox"></div>
+      </div>
+    </div>
+
+    <div class="hd-right">
+      <button id="upload-btn" class="btn btn-primary btn-sm">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <span class="btn-label">上传</span>
+      </button>
+      <div class="user-widget">
+        <button id="user-btn" class="avatar-btn" aria-haspopup="true" aria-expanded="false">
+          <i class="fas fa-user-circle"></i>
+          <span id="user-name-hd" class="uname-label"></span>
+          <i class="fas fa-chevron-down tiny-caret"></i>
+        </button>
+        <div id="user-menu" class="dropdown hidden" role="menu">
+          <div class="dropdown-header">
+            <i class="fas fa-user-circle"></i>
+            <span id="user-name-menu"></span>
+          </div>
+          <button id="logout-btn" class="dropdown-item" role="menuitem">
+            <i class="fas fa-sign-out-alt"></i> 退出登录
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Body ─────────────────────────────────── -->
+  <div id="body-wrap">
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sb-head">
+        <h2><i class="fas fa-images"></i> 全景照片</h2>
+        <button id="sidebar-close" class="icon-btn" aria-label="关闭侧边栏">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="sb-content">
+        <!-- rendered by JS -->
+      </div>
+    </aside>
+
+    <!-- Map -->
+    <div id="map-wrap">
+      <div id="map"></div>
+    </div>
+
+  </div><!-- /body-wrap -->
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════════════════
+     UPLOAD MODAL
+     ═══════════════════════════════════════════════ -->
+<div id="upload-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+  <div class="modal-card upload-card">
+    <div class="modal-hd">
+      <h2 id="upload-title"><i class="fas fa-cloud-upload-alt"></i> 上传全景照片</h2>
+      <button class="icon-btn modal-close-btn" data-close="upload-modal" aria-label="关闭"><i class="fas fa-times"></i></button>
+    </div>
+
+    <form id="upload-form" novalidate>
+      <div class="form-row two-col">
+        <div class="form-field">
+          <label for="photo-name">照片名称 <span class="req">*</span></label>
+          <input id="photo-name" type="text" placeholder="给全景照片起个名字" required />
+        </div>
+        <div class="form-field">
+          <label for="photo-group">分组</label>
+          <input id="photo-group" type="text" placeholder="选择或新建分组" list="group-datalist" />
+          <datalist id="group-datalist"></datalist>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="photo-desc">描述</label>
+        <textarea id="photo-desc" rows="2" placeholder="添加描述（可选）"></textarea>
+      </div>
+
+      <div class="form-field">
+        <label>全景图片 <span class="req">*</span></label>
+        <div class="drop-zone" id="drop-zone">
+          <input id="photo-file" type="file" accept="image/*" />
+          <div class="drop-placeholder" id="drop-placeholder">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>点击选择，或拖拽图片到此处</p>
+            <small>支持 JPG / PNG / WebP</small>
+          </div>
+          <div class="drop-preview hidden" id="drop-preview">
+            <img id="preview-img" alt="预览" />
+            <button type="button" class="remove-preview icon-btn" id="remove-preview-btn" aria-label="移除图片">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>地图定位 <span class="req">*</span></label>
+        <div class="loc-row">
+          <input id="loc-search" type="text" placeholder="搜索地址…" autocomplete="off" />
+          <button type="button" id="gps-btn" class="btn btn-ghost btn-sm">
+            <i class="fas fa-location-arrow"></i> 当前位置
+          </button>
+        </div>
+        <div id="upload-map"></div>
+        <div class="coords-row">
+          纬度&nbsp;<strong id="lat-val">—</strong>&ensp;经度&nbsp;<strong id="lng-val">—</strong>
+        </div>
+        <input type="hidden" id="photo-lat" />
+        <input type="hidden" id="photo-lng" />
+      </div>
+
+      <div class="modal-ft">
+        <button type="button" class="btn btn-ghost" data-close="upload-modal">取消</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-check"></i> 确认上传
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     EDIT MODAL
+     ═══════════════════════════════════════════════ -->
+<div id="edit-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+  <div class="modal-card">
+    <div class="modal-hd">
+      <h2 id="edit-title"><i class="fas fa-edit"></i> 编辑照片信息</h2>
+      <button class="icon-btn modal-close-btn" data-close="edit-modal" aria-label="关闭"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="edit-form" novalidate>
+      <input type="hidden" id="edit-id" />
+      <div class="form-field">
+        <label for="edit-name">照片名称 <span class="req">*</span></label>
+        <input id="edit-name" type="text" required />
+      </div>
+      <div class="form-field">
+        <label for="edit-group">分组</label>
+        <input id="edit-group" type="text" list="edit-group-datalist" />
+        <datalist id="edit-group-datalist"></datalist>
+      </div>
+      <div class="form-field">
+        <label for="edit-desc">描述</label>
+        <textarea id="edit-desc" rows="3"></textarea>
+      </div>
+      <div class="modal-ft">
+        <button type="button" class="btn btn-ghost" data-close="edit-modal">取消</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存修改</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PANORAMA VIEWER (full-screen)
+     ═══════════════════════════════════════════════ -->
+<div id="pano-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="全景查看器">
+  <div id="pano-viewer"></div>
+  <div id="pano-hud">
+    <div class="pano-meta">
+      <h3 id="pano-title-hud"></h3>
+      <p id="pano-desc-hud"></p>
+    </div>
+    <button id="pano-close-btn" class="btn btn-close-pano">
+      <i class="fas fa-compress-alt"></i> 退出全景
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     LOADING OVERLAY
+     ═══════════════════════════════════════════════ -->
+<div id="loading-overlay" class="overlay hidden" aria-live="polite" aria-label="加载中">
+  <div class="spinner-wrap">
+    <i class="fas fa-circle-notch fa-spin"></i>
+    <span>处理中…</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TOAST CONTAINER
+     ═══════════════════════════════════════════════ -->
+<div id="toast-container" role="status" aria-live="polite"></div>
+
+<!-- ═══════════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════════ -->
+<!-- Pannellum (loaded sync before app scripts) -->
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+<!-- App modules (loaded sync, defines window.initAmap at end of app.js) -->
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/panorama.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+
+<!-- Amap 2.0 — calls window.initAmap() once SDK is ready -->
+<script src="https://webapi.amap.com/maps?v=2.0&key=1ae1b4a6c27c553d76869aa1ec4c440f&callback=initAmap&plugin=AMap.AutoComplete,AMap.PlaceSearch,AMap.Geocoder,AMap.Geolocation"></script>
+
+</body>
+</html>
