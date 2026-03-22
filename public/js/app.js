@@ -7,7 +7,7 @@
 const runtimeConfig = window.PANOMAP_CONFIG || {};
 
 function normalizeBaseUrl(url) {
-  const clean = String(url || '').trim();
+  const clean = (url || '').trim();
   if (!clean) return '';
   return clean.replace(/\/+$/, '');
 }
