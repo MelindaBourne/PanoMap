@@ -4,6 +4,29 @@
 
 'use strict';
 
+const runtimeConfig = window.PANOMAP_CONFIG || {};
+
+function normalizeBaseUrl(url) {
+  const clean = (url || '').trim();
+  if (!clean) return '';
+  return clean.replace(/\/+$/, '');
+}
+
+const API_BASE_URL = normalizeBaseUrl(runtimeConfig.apiBaseUrl);
+const UPLOADS_BASE_URL = normalizeBaseUrl(
+  runtimeConfig.uploadsBaseUrl || (API_BASE_URL ? `${API_BASE_URL}/uploads` : '/uploads'),
+);
+
+function apiUrl(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;
+}
+
+function uploadUrl(filePath) {
+  const cleanPath = String(filePath || '').replace(/^\/+/, '');
+  return `${UPLOADS_BASE_URL}/${cleanPath}`;
+}
+
 // ── State ──────────────────────────────────────────────────────────────
 const state = {
   user: null,       // { id, username }
@@ -56,7 +79,7 @@ const api = {
     if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
     if (!isFormData && body) headers['Content-Type'] = 'application/json';
 
-    const res = await fetch(path, {
+    const res = await fetch(apiUrl(path), {
       method,
       headers,
       body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
@@ -280,8 +303,8 @@ const sidebarModule = {
       // Render items
       items.forEach((p) => {
         const thumbSrc = p.thumbnail
-          ? `/uploads/${p.thumbnail}`
-          : `/uploads/${p.filename}`;
+          ? uploadUrl(p.thumbnail)
+          : uploadUrl(p.filename);
 
         const isOwner = state.user && p.user_id === state.user.id;
 
@@ -438,7 +461,7 @@ const mapModule = {
       state.markers[p.id].marker.setMap(null);
     }
 
-    const thumbSrc = p.thumbnail ? `/uploads/${p.thumbnail}` : `/uploads/${p.filename}`;
+    const thumbSrc = p.thumbnail ? uploadUrl(p.thumbnail) : uploadUrl(p.filename);
     const el = document.createElement('div');
     el.className = 'map-marker';
     el.innerHTML = `
@@ -540,7 +563,7 @@ const panoramaModule = {
     const container = $('#pannellum-container');
     container.innerHTML = '';
 
-    const imageUrl = `/uploads/${p.filename}`;
+    const imageUrl = uploadUrl(p.filename);
 
     state.pannellumViewer = pannellum.viewer(container, {
       type:              'equirectangular',

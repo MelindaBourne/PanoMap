@@ -1,0 +1,56 @@
+name: Deploy static site to GitHub Pages
+
+on:
+  push:
+    branches: [ "main", "copilot/**" ]
+    paths:
+      - "public/**"
+      - ".github/workflows/deploy-pages.yml"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static artifact
+        env:
+          PANOMAP_API_BASE_URL: ${{ vars.PANOMAP_API_BASE_URL }}
+        run: |
+          mkdir -p dist
+          cp -R public/. dist/
+          API_BASE="${PANOMAP_API_BASE_URL%/}"
+          cat > dist/js/config.js <<EOF
+          window.PANOMAP_CONFIG = window.PANOMAP_CONFIG || {
+            apiBaseUrl: "${API_BASE}",
+            uploadsBaseUrl: "${API_BASE:+${API_BASE}/uploads}",
+          };
+          EOF
+          touch dist/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
