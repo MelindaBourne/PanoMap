@@ -123,6 +123,25 @@ npm install sharp
 
 ---
 
+## GitHub Pages 部署（Action）
+
+仓库已内置 `/.github/workflows/deploy-pages.yml`，可将 `public/` 目录发布到 GitHub Pages。
+
+- 默认触发方式：
+  - 推送到 `main` 分支（且改动包含 `public/**`、workflow 文件或 README）
+  - 手动触发（`workflow_dispatch`）
+- 发布产物：`public/`（包含 `.nojekyll`）
+
+### Pages 前端连接后端 API（可选）
+
+若 Pages 与后端服务不在同一域名，请在仓库 **Settings → Secrets and variables → Actions → Variables** 中添加：
+
+- `PANOMAP_API_BASE_URL`（例如 `https://your-api.example.com`）
+
+部署时会自动写入 `public/js/config.js` 中的运行时配置，让前端请求该后端地址及其 `/uploads` 资源。
+
+---
+
 ## 许可证
 
 MIT
